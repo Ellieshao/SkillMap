@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import DetailPanel from '@/components/DetailPanel'
 import { SkillNode, SkillData } from '@/types/skill'
@@ -14,6 +14,17 @@ const SkillTreeCanvas = dynamic(
 export default function Home() {
   const [skillData, setSkillData] = useState<SkillData>(initialSkillData)
   const [expandedRoots, setExpandedRoots] = useState<Set<string>>(new Set())
+  const [showHelp, setShowHelp] = useState(false)
+  const helpRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!showHelp) return
+    function onClickOutside(e: MouseEvent) {
+      if (helpRef.current && !helpRef.current.contains(e.target as Node)) setShowHelp(false)
+    }
+    document.addEventListener('mousedown', onClickOutside)
+    return () => document.removeEventListener('mousedown', onClickOutside)
+  }, [showHelp])
 
   // Selection states (ids only — live data derived from skillData)
   const [isCenterSelected,  setIsCenterSelected]  = useState(false)
@@ -185,17 +196,48 @@ export default function Home() {
           onCanvasClick={handleCanvasClick}
         />
 
-        <div
-          className="absolute bottom-4 left-4 flex items-center gap-4 px-3 py-2 rounded-lg text-xs text-slate-400"
-          style={{ background: '#ffffff08', border: '1px solid #ffffff12' }}
-        >
-          <span>點「我」自訂節點</span>
-          <span className="text-slate-600">·</span>
-          <span>點根節點展開</span>
-          <span className="text-slate-600">·</span>
-          <span>點分支規劃學習</span>
-          <span className="text-slate-600">·</span>
-          <span>滾輪縮放</span>
+        <div ref={helpRef} className="absolute bottom-4 left-4">
+          {/* Help popup */}
+          {showHelp && (
+            <div
+              className="absolute bottom-10 left-0 mb-1 rounded-xl px-4 py-3 text-xs text-slate-300 space-y-2 whitespace-nowrap"
+              style={{ background: '#1a1a2e', border: '1px solid #ffffff18', boxShadow: '0 8px 32px #00000066' }}
+            >
+              <div className="flex items-center gap-2.5">
+                <span className="text-slate-500">①</span>
+                <span>點「<span className="text-white font-medium">我</span>」自訂名稱與顏色</span>
+              </div>
+              <div className="flex items-center gap-2.5">
+                <span className="text-slate-500">②</span>
+                <span>點<span className="text-white font-medium">根節點</span>展開 / 新增技能</span>
+              </div>
+              <div className="flex items-center gap-2.5">
+                <span className="text-slate-500">③</span>
+                <span>點<span className="text-white font-medium">分支節點</span>規劃學習計畫</span>
+              </div>
+              <div className="flex items-center gap-2.5">
+                <span className="text-slate-500">④</span>
+                <span>滾輪 / 拖曳<span className="text-white font-medium">縮放移動</span>畫布</span>
+              </div>
+            </div>
+          )}
+          {/* Icon button */}
+          <button
+            type="button"
+            onClick={() => setShowHelp(v => !v)}
+            className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-white transition-all"
+            style={{
+              background: showHelp ? '#ffffff18' : '#ffffff0a',
+              border: `1px solid ${showHelp ? '#ffffff30' : '#ffffff15'}`,
+            }}
+            title="使用說明"
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <circle cx="7" cy="7" r="6" stroke="currentColor" strokeWidth="1.3"/>
+              <path d="M5.5 5.5a1.5 1.5 0 0 1 3 .5c0 1-1.5 1.5-1.5 2.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+              <circle cx="7" cy="10.5" r="0.6" fill="currentColor"/>
+            </svg>
+          </button>
         </div>
       </div>
 

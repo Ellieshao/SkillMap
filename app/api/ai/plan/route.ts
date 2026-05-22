@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
   try {
     const { skillName, goal, rootLabel } = await req.json()
 
-    const result = await model.generateContentStream(
+    const result = await model.generateContent(
       `你是學習規劃專家，只回傳 JSON，不要其他文字。
 技能：${skillName}（${rootLabel ?? ''}類別）
 目標：${goal?.trim() || '提升至實用水準'}
@@ -27,19 +27,9 @@ export async function POST(req: NextRequest) {
 }`
     )
 
-    const readable = new ReadableStream({
-      async start(controller) {
-        for await (const chunk of result.stream) {
-          const text = chunk.text()
-          if (text) controller.enqueue(new TextEncoder().encode(text))
-        }
-        controller.close()
-      },
-    })
-
-    return new Response(readable, {
-      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
-    })
+    const text  = result.response.text()
+    const match = text.match(/\{[\s\S]*\}/)
+    return NextResponse.json(match ? JSON.parse(match[0]) : { milestones: [], resources: [] })
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 500 })
   }

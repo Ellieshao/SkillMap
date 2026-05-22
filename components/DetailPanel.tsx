@@ -514,9 +514,8 @@ function BranchPlan({
   const mileInputRef = useRef<HTMLInputElement>(null)
 
   // AI states
-  const [isGenerating,  setIsGenerating]  = useState(false)
-  const [genProgress,   setGenProgress]   = useState('')
-  const [genError,      setGenError]      = useState('')
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [genError,     setGenError]     = useState('')
 
   // Milestone expand & AI suggest
   const [expandedMileId, setExpandedMileId] = useState<string | null>(null)
@@ -528,7 +527,6 @@ function BranchPlan({
     setTargetDate(node.targetDate ?? '')
     setNewMile('')
     setShowResForm(false)
-    setGenProgress('')
     setGenError('')
     setExpandedMileId(null)
     setMileSugs([])
@@ -541,41 +539,26 @@ function BranchPlan({
 
   /* ── AI: 生成完整計畫 ── */
   async function generatePlan() {
-    setIsGenerating(true); setGenProgress(''); setGenError('')
+    setIsGenerating(true); setGenError('')
     try {
       const res = await fetch('/api/ai/plan', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ skillName: node.label, goal, rootLabel }),
       })
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}))
-        throw new Error(err.error ?? `伺服器錯誤（${res.status}）`)
-      }
-      if (!res.body) throw new Error('no stream')
-      const reader  = res.body.getReader()
-      const decoder = new TextDecoder()
-      let text = ''
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-        text += decoder.decode(value)
-        setGenProgress(text)
-      }
-      const jsonStr = extractJSON(text)
-      if (!jsonStr) throw new Error('無法解析 AI 回應，請再試一次')
-      const parsed = JSON.parse(jsonStr)
-      const newMilestones: Milestone[] = (parsed.milestones ?? []).map(
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? `伺服器錯誤（${res.status}）`)
+      const newMilestones: Milestone[] = (data.milestones ?? []).map(
         (m: { label: string }, i: number) => ({
           id: `ai-${Date.now()}-${i}`,
           label: cleanMileLabel(m.label),
           done: false,
         })
       )
-      onUpdate({ milestones: newMilestones, resources: parsed.resources ?? [] })
+      onUpdate({ milestones: newMilestones, resources: data.resources ?? [] })
     } catch (e) {
       setGenError(e instanceof Error ? e.message : String(e))
     } finally {
-      setIsGenerating(false); setGenProgress('')
+      setIsGenerating(false)
     }
   }
 
@@ -654,12 +637,6 @@ function BranchPlan({
             ? <><Spinner color={node.color} /> AI 生成中…</>
             : (goal.trim() ? '✦ 根據目標生成學習計畫' : '✦ AI 一鍵生成學習計畫')}
         </button>
-        {isGenerating && genProgress && (
-          <div className="mt-2 rounded-lg px-3 py-2 text-xs text-slate-500 font-mono leading-relaxed overflow-hidden"
-            style={{ background: '#0a0a1e', maxHeight: 72 }}>
-            {genProgress.slice(-160)}<span className="animate-pulse">▌</span>
-          </div>
-        )}
         {genError && <p className="text-red-400 text-xs mt-1">{genError}</p>}
       </Section>
 

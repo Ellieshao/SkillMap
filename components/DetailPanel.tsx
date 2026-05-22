@@ -546,7 +546,12 @@ function BranchPlan({
         body: JSON.stringify({ skillName: node.label, goal, rootLabel }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? `伺服器錯誤（${res.status}）`)
+      if (!res.ok) {
+        const raw = data.error ?? ''
+        if (raw.includes('429') || raw.includes('quota') || raw.includes('Quota'))
+          throw new Error('AI 請求次數已達上限，請稍後再試')
+        throw new Error('生成失敗，請稍後再試')
+      }
       const newMilestones: Milestone[] = (data.milestones ?? []).map(
         (m: { label: string }, i: number) => ({
           id: `ai-${Date.now()}-${i}`,
